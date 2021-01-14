@@ -32,9 +32,21 @@ public class Constant {
     // 任务质量与报价转化参数
     public static final double TRANSFER_VALUE = 0.9;
 
-    // 任务价值公式
+    // 参与者感知成本范围上限
+    public static final double SENSOR_COST_UPPER = 3.0;
+
+    // 参与者感知成本范围下限
+    public static final double SENSOR_COST_FLOOR = 1.0;
+
+    // 参与者意愿值范围上限
+    public static final double WILLINGNESS_UPPER = 0.3;
+
+    // 参与者意愿值范围下限
+    public static final double WILLINGNESS_FLOOR = 0.05;
+
+    // 任务报价公式
     public static double getTaskBid(double taskValue){
-        return taskValue * TRANSFER_BID;
+        return taskValue * TRANSFER_VALUE;
     }
 
     // 任务价值公式

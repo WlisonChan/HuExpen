@@ -1,6 +1,7 @@
 package org.csu.mcs;
 
 import lombok.extern.slf4j.Slf4j;
+import org.csu.algorithm.DecoyStage;
 import org.csu.entity.Agent;
 import org.csu.entity.Task;
 import org.csu.entity.TaskType;
@@ -13,8 +14,10 @@ import java.util.Random;
 public class Main {
 
     public static void main(String[] args) {
-        new Main().initAgentStatus();
-
+        List<Agent> agentList = initAgentStatus();
+        List<Task> taskList = initTaskStatus();
+        classifyTask(taskList);
+        DecoyStage.build(taskList,agentList);
     }
 
     /**
@@ -22,17 +25,23 @@ public class Main {
      *
      * @return
      */
-    public List<Agent> initAgentStatus() {
+    public static List<Agent> initAgentStatus() {
         log.info("-----开始参与者初始化-----");
         List<Agent> agentList = new ArrayList<>();
         Random random = new Random();
         for (int i = 0; i < Constant.WORKER_NUM; i++) {
             double costBase = Constant.AGENT_COST_PERCENT * Constant.AGENT_COST_UPPER;
             double costUpper = costBase + (Constant.AGENT_COST_UPPER - costBase) * random.nextDouble();
+            double sensorCost = Constant.SENSOR_COST_FLOOR +
+                    (Constant.SENSOR_COST_UPPER-Constant.SENSOR_COST_FLOOR)*random.nextDouble();
+            double willingness = Constant.WILLINGNESS_FLOOR +
+                    (Constant.WILLINGNESS_UPPER-Constant.WILLINGNESS_FLOOR)*random.nextDouble();
 
             Agent agent = new Agent();
             agent.setAgentId(i)
-                    .setCostUpper(costUpper);
+                    .setCostUpper(costUpper)
+                    .setSensoryCost(sensorCost)
+                    .setWillingness(willingness);
             agentList.add(agent);
             log.info("参与者信息：{}",agent);
         }
@@ -45,7 +54,7 @@ public class Main {
      *
      * @return
      */
-    public List<Task> initTaskStatus() {
+    public static List<Task> initTaskStatus() {
         log.info("-----开始任务初始化-----");
         List<Task> taskList = new ArrayList<>();
         Random random = new Random();
@@ -72,7 +81,7 @@ public class Main {
      *
      * @param taskList
      */
-    public void classifyTask(List<Task> taskList) {
+    public static void classifyTask(List<Task> taskList) {
 
         // 计算平均质量
         double avg = taskList.stream()

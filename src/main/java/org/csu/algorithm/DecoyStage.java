@@ -17,6 +17,16 @@ public class DecoyStage {
     // 诱饵任务与目标任务的报价转化比
     public static final double DECOY_BID_TRANSFER = 0.93;
 
+    public static void build(List<Task> taskList,List<Agent> agentList){
+        DecoyStage decoyStage = new DecoyStage();
+        // 添加诱饵任务
+        List<Task> decoyTask = decoyStage.addDecoyTask(taskList);
+        // 参与者选择任务
+        decoyStage.selectTask(agentList,taskList,decoyTask);
+        // 获胜者选择
+        decoyStage.selectWinner(taskList);
+    }
+
     /**
      * 添加诱饵任务
      * @param taskList
@@ -30,10 +40,12 @@ public class DecoyStage {
                 Task decoy = new Task();
                 decoy.setTaskQuality(task.getTaskQuality() * DECOY_QUALITY_TRANSFER)
                         .setTaskBid(task.getTaskBid() * DECOY_BID_TRANSFER)
-                        .setTaskType(TaskType.Decoy);
+                        .setTaskType(TaskType.Decoy)
+                        .setTaskId(i);
 
                 task.setDecoyTask(decoy);
                 decoyTask.add(decoy);
+                log.info("诱饵任务信息: {}",decoy);
             }
         }
         log.info("-----诱饵任务加入数量[{}]-----",decoyTask.size());
@@ -41,19 +53,38 @@ public class DecoyStage {
         return decoyTask;
     }
 
+    /**
+     * 参与者选择任务方法入口
+     * @param agentList
+     * @param taskList
+     * @param decoyList
+     */
+    public void selectTask(List<Agent> agentList,List<Task> taskList,List<Task> decoyList){
+        agentList.forEach(e->selectTask(e,taskList,decoyList));
+    }
+
+    /**
+     * 参与者根据契机值选择任务
+     * @param agent
+     * @param taskList
+     * @param decoyList
+     */
     public void selectTask(Agent agent,List<Task> taskList,List<Task> decoyList){
         Map<Task,Double> taskMap = new HashMap<>();
         for (int i = 0; i < taskList.size(); i++) {
             Task task = taskList.get(i);
 
-            double cost = agent.calCostForTask(task);
+            if (null != task.getWinner()){
+                continue;
+            }
 
+            double cost = agent.calCostForTask(task);
             double v;
             // 判断是否是目标任务
             if (TaskType.Target.equals(task.getTaskType())){
                 Task decoyTask = task.getDecoyTask();
                 double decoyCost = agent.calCostForTask(decoyTask);
-                v = calMotivation(task.getTaskBid(), cost, decoyTask.getTaskId(), decoyCost);
+                v = calMotivation(task.getTaskBid(), decoyTask.getTaskBid(), cost,decoyCost);
             }else {
                 v = getMaxDecoyVal(agent, task, decoyList);
             }
@@ -61,13 +92,22 @@ public class DecoyStage {
         }
         // 根据契机值排序
         List<Map.Entry<Task,Double>> list = new ArrayList<>(taskMap.entrySet());
-        Collections.sort(list,new Comparator<Map.Entry<Task,Double>>() {
-            @Override
-            public int compare(Map.Entry<Task, Double> o1, Map.Entry<Task, Double> o2) {
-                return o2.getValue().compareTo(o1.getValue());
-            }
-        });
+        Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
+        double costUpper = agent.getCostUpper();
+        double curCost = 0;
 
+        // 任务选择（按照契机值从小到大选择）
+        Random random = new Random();
+        for (int i = 0; i < list.size(); i++) {
+            Task task = list.get(i).getKey();
+            double cost = agent.calCostForTask(task);
+            if (curCost+cost<costUpper){
+                curCost+=cost;
+                agent.getSelectedTaskSet().add(task);
+                double bid = cost + (task.getTaskBid()-cost)*random.nextDouble();
+                task.getSelectedAgent().put(agent,bid);
+            }
+        }
     }
 
     /**
@@ -105,4 +145,23 @@ public class DecoyStage {
         return res;
     }
 
+    /**
+     * 获胜者选择
+     * @param taskList
+     */
+    public void selectWinner(List<Task> taskList){
+        for (int i = 0; i < taskList.size(); i++) {
+            Task task = taskList.get(i);
+            Map<Agent, Double> selectedAgent = task.getSelectedAgent();
+            if (selectedAgent.size() == 0) {
+                continue;
+            }
+            // 报价降序排序
+            List<Map.Entry<Agent,Double>> list = new ArrayList<>(selectedAgent.entrySet());
+            Collections.sort(list, Comparator.comparing(Map.Entry::getValue));
+            Agent winner = list.get(0).getKey();
+            task.setWinner(winner);
+            log.info("Task:{} is completed by agent[{}]",task.getTaskId(),winner.getAgentId());
+        }
+    }
 }

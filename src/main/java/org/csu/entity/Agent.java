@@ -1,12 +1,15 @@
 package org.csu.entity;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Accessors(chain = true)
 public class Agent {
 
@@ -42,4 +45,22 @@ public class Agent {
         return sensoryCost+Math.pow(Math.E,willingness*task.getTaskQuality());
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Agent){
+            return ((Agent) obj).getAgentId().equals(this.agentId);
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "Agent{" +
+                "agentId=" + agentId +
+                ", costUpper=" + costUpper +
+                ", agentType=" + agentType +
+                ", sensoryCost=" + sensoryCost +
+                ", willingness=" + willingness +
+                '}';
+    }
 }
