@@ -25,6 +25,9 @@ public class DecoyStage {
         decoyStage.selectTask(agentList,taskList,decoyTask);
         // 获胜者选择
         decoyStage.selectWinner(taskList);
+
+        long completedSum = taskList.stream().filter(e -> e.getWinner() != null).count();
+        System.out.println(completedSum);
     }
 
     /**
@@ -41,7 +44,7 @@ public class DecoyStage {
                 decoy.setTaskQuality(task.getTaskQuality() * DECOY_QUALITY_TRANSFER)
                         .setTaskBid(task.getTaskBid() * DECOY_BID_TRANSFER)
                         .setTaskType(TaskType.Decoy)
-                        .setTaskId(i);
+                        .setTaskId(Constant.TASK_NUM+i);
 
                 task.setDecoyTask(decoy);
                 decoyTask.add(decoy);
@@ -49,7 +52,7 @@ public class DecoyStage {
             }
         }
         log.info("-----诱饵任务加入数量[{}]-----",decoyTask.size());
-        log.info("-----诱饵任务完成-----");
+        log.info("-----诱饵任务加入完成-----");
         return decoyTask;
     }
 
@@ -60,7 +63,8 @@ public class DecoyStage {
      * @param decoyList
      */
     public void selectTask(List<Agent> agentList,List<Task> taskList,List<Task> decoyList){
-        agentList.forEach(e->selectTask(e,taskList,decoyList));
+        //agentList.forEach(e->selectTask(e,taskList,decoyList));
+        agentList.forEach(e->selectTaskProbability(e,taskList,decoyList));
     }
 
     /**
@@ -146,6 +150,70 @@ public class DecoyStage {
     }
 
     /**
+     * 概率选择任务，契机/总契机
+     * @param agent
+     * @param taskList
+     * @param decoyList
+     */
+    public void selectTaskProbability(Agent agent,List<Task> taskList,List<Task> decoyList){
+        Map<Task,Double> taskMap = new HashMap<>();
+        for (int i = 0; i < taskList.size(); i++) {
+            Task task = taskList.get(i);
+
+            if (null != task.getWinner()){
+                continue;
+            }
+
+            double cost = agent.calCostForTask(task);
+            double v;
+            // 判断是否是目标任务
+            if (TaskType.Target.equals(task.getTaskType())){
+                Task decoyTask = task.getDecoyTask();
+                double decoyCost = agent.calCostForTask(decoyTask);
+                v = calMotivation(task.getTaskBid(), decoyTask.getTaskBid(), cost,decoyCost);
+            }else {
+                v = getMaxDecoyVal(agent, task, decoyList);
+            }
+            taskMap.put(task,v);
+        }
+
+        // 计算总契机值
+        double sumV = 0;
+        for (Map.Entry<Task, Double> e : taskMap.entrySet()) {
+            sumV+=e.getValue();
+        }
+
+        // 更新map里的值为契机概率值
+        for (Map.Entry<Task, Double> e : taskMap.entrySet()) {
+            double probability = e.getValue()/sumV;
+            taskMap.put(e.getKey(),probability);
+        }
+
+        // 任务选择（按照契机值概率选择）
+        double costUpper = agent.getCostUpper();
+        double curCost = 0;
+        Random random = new Random();
+        while(curCost<=costUpper && taskMap.size()>0){
+            boolean flag = true;
+            for (Map.Entry<Task, Double> e : taskMap.entrySet()) {
+                double pro = random.nextDouble();
+                Task curTask = e.getKey();
+                double cost = agent.calCostForTask(curTask);
+                if (pro < e.getValue() && curCost+cost<costUpper){
+                    flag = false;
+                    curCost+=cost;
+                    agent.getSelectedTaskSet().add(curTask);
+                    double bid = cost + (curTask.getTaskBid()-cost)*random.nextDouble();
+                    curTask.getSelectedAgent().put(agent,bid);
+                }
+            }
+            if (flag){
+                break;
+            }
+        }
+    }
+
+    /**
      * 获胜者选择
      * @param taskList
      */
@@ -164,4 +232,5 @@ public class DecoyStage {
             log.info("Task:{} is completed by agent[{}]",task.getTaskId(),winner.getAgentId());
         }
     }
+
 }
