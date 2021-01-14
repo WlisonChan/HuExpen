@@ -22,6 +22,12 @@ public class Agent {
     // 参与者处于阶段
     private AgentType agentType;
 
+    // 感知成本
+    private Double sensoryCost;
+
+    // 意愿指数
+    private Double willingness;
+
     public Agent(){
         this.selectedTaskSet = new ArrayList<>();
         this.agentType = AgentType.DecoyStage;
@@ -33,7 +39,7 @@ public class Agent {
      * @return
      */
     public double calCostForTask(Task task){
-        return 0D;
+        return sensoryCost+Math.pow(Math.E,willingness*task.getTaskQuality());
     }
 
 }

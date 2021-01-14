@@ -11,6 +11,9 @@ public class Constant {
     // 感知任务数量
     public static final int TASK_NUM = 100;
 
+    // 性能因子
+    public static final double PERFORMANCE_FACTOR = 1.0;
+
     // 任务质量上限
     public static final double TASK_QUALITY_UPPER = 10;
 
