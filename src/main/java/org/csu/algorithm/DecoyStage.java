@@ -25,9 +25,8 @@ public class DecoyStage {
         decoyStage.selectTask(agentList,taskList,decoyTask);
         // 获胜者选择
         decoyStage.selectWinner(taskList);
-
-        long completedSum = taskList.stream().filter(e -> e.getWinner() != null).count();
-        System.out.println(completedSum);
+        // 信息打印
+        decoyStage.printTaskInfo(taskList);
     }
 
     /**
@@ -195,7 +194,9 @@ public class DecoyStage {
         Random random = new Random();
         while(curCost<=costUpper && taskMap.size()>0){
             boolean flag = true;
-            for (Map.Entry<Task, Double> e : taskMap.entrySet()) {
+            Iterator<Map.Entry<Task, Double>> iterator = taskMap.entrySet().iterator();
+            for (;iterator.hasNext();) {
+                Map.Entry<Task, Double> e = iterator.next();
                 double pro = random.nextDouble();
                 Task curTask = e.getKey();
                 double cost = agent.calCostForTask(curTask);
@@ -205,6 +206,7 @@ public class DecoyStage {
                     agent.getSelectedTaskSet().add(curTask);
                     double bid = cost + (curTask.getTaskBid()-cost)*random.nextDouble();
                     curTask.getSelectedAgent().put(agent,bid);
+                    iterator.remove();
                 }
             }
             if (flag){
@@ -224,13 +226,32 @@ public class DecoyStage {
             if (selectedAgent.size() == 0) {
                 continue;
             }
+
             // 报价降序排序
             List<Map.Entry<Agent,Double>> list = new ArrayList<>(selectedAgent.entrySet());
             Collections.sort(list, Comparator.comparing(Map.Entry::getValue));
             Agent winner = list.get(0).getKey();
             task.setWinner(winner);
-            log.info("Task:{} is completed by agent[{}]",task.getTaskId(),winner.getAgentId());
+            log.info("Winner selection - Task:{} is completed by agent[{}]",task.getTaskId(),winner.getAgentId());
         }
+    }
+
+    /**
+     * 任务完成情况信息打印
+     * @param taskList
+     */
+    public void printTaskInfo(List<Task> taskList){
+        log.info("---------------任务完成情况---------------");
+        long completedTargetCount = taskList.stream()
+                .filter(e -> TaskType.Target.equals(e.getTaskType()) && e.getWinner() != null)
+                .count();
+        long completedCompCount = taskList.stream()
+                .filter(e -> TaskType.Compete.equals(e.getTaskType()) && e.getWinner() != null)
+                .count();
+        log.info("任务完成总数量：[{}]",completedTargetCount+completedCompCount);
+        log.info("目标类任务完成数量：[{}]",completedTargetCount);
+        log.info("竞争类任务完成数量：[{}]",completedCompCount);
+
     }
 
 }
