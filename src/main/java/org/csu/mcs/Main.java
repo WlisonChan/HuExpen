@@ -13,11 +13,14 @@ import java.util.Random;
 @Slf4j
 public class Main {
 
+    // 当前平均质量
+    public static double avgQ = 0;
+
     public static void main(String[] args) {
         List<Agent> agentList = initAgentStatus();
         List<Task> taskList = initTaskStatus();
         classifyTask(taskList);
-        DecoyStage.build(taskList,agentList);
+        DecoyStage.build(taskList, agentList);
     }
 
     /**
@@ -33,9 +36,9 @@ public class Main {
             double costBase = Constant.AGENT_COST_PERCENT * Constant.AGENT_COST_UPPER;
             double costUpper = costBase + (Constant.AGENT_COST_UPPER - costBase) * random.nextDouble();
             double sensorCost = Constant.SENSOR_COST_FLOOR +
-                    (Constant.SENSOR_COST_UPPER-Constant.SENSOR_COST_FLOOR)*random.nextDouble();
+                    (Constant.SENSOR_COST_UPPER - Constant.SENSOR_COST_FLOOR) * random.nextDouble();
             double willingness = Constant.WILLINGNESS_FLOOR +
-                    (Constant.WILLINGNESS_UPPER-Constant.WILLINGNESS_FLOOR)*random.nextDouble();
+                    (Constant.WILLINGNESS_UPPER - Constant.WILLINGNESS_FLOOR) * random.nextDouble();
 
             Agent agent = new Agent();
             agent.setAgentId(i)
@@ -43,7 +46,7 @@ public class Main {
                     .setSensoryCost(sensorCost)
                     .setWillingness(willingness);
             agentList.add(agent);
-            log.info("参与者信息：{}",agent);
+            log.info("参与者信息：{}", agent);
         }
         log.info("-----参与者初始化结束-----");
         return agentList;
@@ -69,12 +72,11 @@ public class Main {
                     .setTaskBid(Constant.getTaskBid(task.getTaskValue()));
 
             taskList.add(task);
-            log.info("任务信息：{}",task);
+            log.info("任务信息：{}", task);
         }
         log.info("-----任务初始化结束-----");
         return taskList;
     }
-
 
     /**
      * 任务分类
@@ -88,6 +90,8 @@ public class Main {
                 .mapToDouble(Task::getTaskQuality)
                 .average()
                 .orElse(0D);
+
+        avgQ = avg;
 
         // 任务分类
         taskList.forEach(e -> {

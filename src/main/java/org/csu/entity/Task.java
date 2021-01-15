@@ -34,15 +34,15 @@ public class Task {
     private Agent winner;
 
     // 选择此任务的参与者集合 键值对：参与者-报价
-    private Map<Agent,Double> selectedAgent;
+    private Map<Agent, Double> selectedAgent;
 
-    public Task(){
+    public Task() {
         selectedAgent = new HashMap<>();
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Task ){
+        if (obj instanceof Task) {
             return ((Task) obj).getTaskId().equals(this.getTaskId());
         }
         return false;

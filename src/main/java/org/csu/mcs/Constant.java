@@ -45,12 +45,12 @@ public class Constant {
     public static final double WILLINGNESS_FLOOR = 0.05;
 
     // 任务报价公式
-    public static double getTaskBid(double taskValue){
+    public static double getTaskBid(double taskValue) {
         return taskValue * TRANSFER_VALUE;
     }
 
     // 任务价值公式
-    public static double getTaskValue(double taskQuality){
+    public static double getTaskValue(double taskQuality) {
         return taskQuality * TRANSFER_BID;
     }
 

@@ -30,23 +30,31 @@ public class Agent {
     // 意愿指数
     private Double willingness;
 
-    public Agent(){
-        this.selectedTaskSet = new ArrayList<>();
+    // 报酬集合,每个值为每一轮的报酬
+    private List<Double> bidSet;
+
+    // 沉没阈值
+    private Double sinkThreshold;
+
+    public Agent() {
         this.agentType = AgentType.DecoyStage;
+        this.selectedTaskSet = new ArrayList<>();
+        this.bidSet = new ArrayList<>();
     }
 
     /**
      * 计算完成任务所需花费成本
+     *
      * @param task
      * @return
      */
-    public double calCostForTask(Task task){
-        return sensoryCost+Math.pow(Math.E,willingness*task.getTaskQuality());
+    public double calCostForTask(Task task) {
+        return sensoryCost + Math.pow(Math.E, willingness * task.getTaskQuality());
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Agent){
+        if (obj instanceof Agent) {
             return ((Agent) obj).getAgentId().equals(this.agentId);
         }
         return false;
