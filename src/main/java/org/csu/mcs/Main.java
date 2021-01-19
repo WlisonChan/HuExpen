@@ -2,9 +2,10 @@ package org.csu.mcs;
 
 import lombok.extern.slf4j.Slf4j;
 import org.csu.algorithm.DecoyStage;
+import org.csu.algorithm.SinkStage;
 import org.csu.entity.Agent;
 import org.csu.entity.Task;
-import org.csu.entity.TaskType;
+import org.csu.type.TaskType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,7 @@ public class Main {
         List<Task> taskList = initTaskStatus();
         classifyTask(taskList);
         DecoyStage.build(taskList, agentList);
+        SinkStage.build(agentList);
     }
 
     /**
@@ -31,20 +33,20 @@ public class Main {
     public static List<Agent> initAgentStatus() {
         log.info("-----开始参与者初始化-----");
         List<Agent> agentList = new ArrayList<>();
-        Random random = new Random();
         for (int i = 0; i < Constant.WORKER_NUM; i++) {
-            double costBase = Constant.AGENT_COST_PERCENT * Constant.AGENT_COST_UPPER;
-            double costUpper = costBase + (Constant.AGENT_COST_UPPER - costBase) * random.nextDouble();
-            double sensorCost = Constant.SENSOR_COST_FLOOR +
-                    (Constant.SENSOR_COST_UPPER - Constant.SENSOR_COST_FLOOR) * random.nextDouble();
-            double willingness = Constant.WILLINGNESS_FLOOR +
-                    (Constant.WILLINGNESS_UPPER - Constant.WILLINGNESS_FLOOR) * random.nextDouble();
+            double sinkMax = generateRandom(Constant.SINK_MAX_FLOOR, Constant.SINK_MAX_UPPER);
+            double costUpper = generateRandom(Constant.AGENT_COST_FLOOR, Constant.AGENT_COST_UPPER);
+            double sensorCost = generateRandom(Constant.SENSOR_COST_FLOOR, Constant.SENSOR_COST_UPPER);
+            double willingness = generateRandom(Constant.WILLINGNESS_FLOOR, Constant.WILLINGNESS_UPPER);
+            double participantVal = generateRandom(Constant.PARTICIPATION_FLOOR, Constant.PARTICIPATION_UPPER);
 
             Agent agent = new Agent();
             agent.setAgentId(i)
+                    .setSinkMax(sinkMax)
                     .setCostUpper(costUpper)
                     .setSensoryCost(sensorCost)
-                    .setWillingness(willingness);
+                    .setWillingness(willingness)
+                    .setVThreshold(participantVal);
             agentList.add(agent);
             log.info("参与者信息：{}", agent);
         }
@@ -62,8 +64,7 @@ public class Main {
         List<Task> taskList = new ArrayList<>();
         Random random = new Random();
         for (int i = 0; i < Constant.TASK_NUM; i++) {
-            double qualityBase = Constant.TASK_QUALITY_UPPER * Constant.TASK_QUALITY_PERCENT;
-            double quality = qualityBase + (Constant.TASK_QUALITY_UPPER - qualityBase) * random.nextDouble();
+            double quality = generateRandom(Constant.TASK_QUALITY_FLOOR, Constant.TASK_QUALITY_UPPER);
 
             Task task = new Task();
             task.setTaskId(i)
@@ -101,6 +102,18 @@ public class Main {
                 e.setTaskType(TaskType.Compete);
             }
         });
+    }
+
+    /**
+     * 根据上下限生成随机值
+     *
+     * @param floor
+     * @param upper
+     * @return
+     */
+    public static double generateRandom(double floor, double upper) {
+        Random random = new Random();
+        return floor + (upper - floor) * random.nextDouble();
     }
 
 }

@@ -1,4 +1,4 @@
-package org.csu.entity;
+package org.csu.type;
 
 public enum TaskType {
 

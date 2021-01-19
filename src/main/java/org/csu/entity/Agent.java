@@ -3,6 +3,7 @@ package org.csu.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.csu.type.AgentType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +19,8 @@ public class Agent {
     // 参与者成本上限
     private Double costUpper;
 
-    // 参与者已选择任务集合;
-    private List<Task> selectedTaskSet;
+    // 参与者已选择任务集合; ([0]:任务,[1]:报价)
+    private List<Object[]> selectedTaskSet;
 
     // 参与者处于阶段
     private AgentType agentType;
@@ -31,15 +32,34 @@ public class Agent {
     private Double willingness;
 
     // 报酬集合,每个值为每一轮的报酬
-    private List<Double> bidSet;
+    private List<Double> paySet;
 
     // 沉没阈值
     private Double sinkThreshold;
 
+    // 此轮完成的任务("task")
+    private List<Object[]> completedTask;
+
+    // 累积完成的任务集合
+    private List<Object[]> allCompletedTask;
+
+    // 参与阈值
+    private Double VThreshold;
+
+    // 沉没成本最大值
+    private Double sinkMax;
+
+    // 当前沉没成本值（轮次叠加）
+    private Double sinkValue;
+
     public Agent() {
+        this.sinkValue = 0D;
         this.agentType = AgentType.DecoyStage;
+
+        this.paySet = new ArrayList<>();
+        this.completedTask = new ArrayList<>();
         this.selectedTaskSet = new ArrayList<>();
-        this.bidSet = new ArrayList<>();
+        this.allCompletedTask = new ArrayList<>();
     }
 
     /**
@@ -50,6 +70,15 @@ public class Agent {
      */
     public double calCostForTask(Task task) {
         return sensoryCost + Math.pow(Math.E, willingness * task.getTaskQuality());
+    }
+
+    /**
+     * 计算完成任务所需花费成本
+     * @param quality
+     * @return
+     */
+    public double calCostForTask(double quality) {
+        return sensoryCost + Math.pow(Math.E, willingness * quality);
     }
 
     @Override

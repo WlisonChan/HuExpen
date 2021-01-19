@@ -3,7 +3,7 @@ package org.csu.algorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.csu.entity.Agent;
 import org.csu.entity.Task;
-import org.csu.entity.TaskType;
+import org.csu.type.TaskType;
 import org.csu.mcs.Constant;
 import org.csu.mcs.Main;
 
@@ -132,8 +132,11 @@ public class DecoyStage {
             double cost = agent.calCostForTask(task);
             if (curCost + cost < costUpper) {
                 curCost += cost;
-                agent.getSelectedTaskSet().add(task);
                 double bid = cost + (task.getTaskBid() - cost) * random.nextDouble();
+                Object[] obj = new Object[2];
+                obj[0] = task;
+                obj[1] = bid;
+                agent.getSelectedTaskSet().add(obj);
                 task.getSelectedAgent().put(agent, bid);
             }
         }
@@ -255,8 +258,12 @@ public class DecoyStage {
                     flag = false;
                     selected.add(i);
                     curCost += cost;
-                    agent.getSelectedTaskSet().add(task);
+                    // 参与者对任务报价
                     double bid = cost + (task.getTaskBid() - cost) * random.nextDouble();
+                    Object[] obj = new Object[2];
+                    obj[0] = task;
+                    obj[1] = bid;
+                    agent.getSelectedTaskSet().add(obj);
                     task.getSelectedAgent().put(agent, bid);
                 }
             }
@@ -284,6 +291,12 @@ public class DecoyStage {
             Collections.sort(list, Comparator.comparing(Map.Entry::getValue));
             Agent winner = list.get(0).getKey();
             task.setWinner(winner);
+
+            Object[] obj = new Object[3];
+            obj[0] = task;
+            obj[1] = list.get(0).getValue();
+
+            winner.getCompletedTask().add(obj);
             log.info("Winner selection - Task:{} is completed by agent[{}]", task.getTaskId(), winner.getAgentId());
         }
     }
@@ -317,12 +330,18 @@ public class DecoyStage {
         StringBuilder str = new StringBuilder();
         for (int i = 0; i < agentList.size(); i++) {
             Agent agent = agentList.get(i);
-            List<Task> taskSet = agent.getSelectedTaskSet();
-            if (taskSet.size() == 0) {
-                continue;
+            List<Object[]> taskSet = agent.getSelectedTaskSet();
+            if (agent.getCompletedTask().size() > 0) {
+                winnerSize++;
             }
-            winnerSize++;
-            long count = taskSet.stream().filter(e -> TaskType.Compete.equals(e.getTaskType())).count();
+            long count = 0;
+            for (int j = 0; j < taskSet.size(); j++) {
+                Object[] obj = taskSet.get(j);
+                Task task = (Task) obj[0];
+                if (TaskType.Compete.equals(task.getTaskType())){
+                    count++;
+                }
+            }
             if (count == taskSet.size()) {
                 String s = "参与者id:" + agent.getAgentId() + "\t 竞争任务数量：" + count + "\n";
                 str.append(s);
@@ -337,7 +356,7 @@ public class DecoyStage {
         log.info("-----报酬支付信息-----");
         for (int i = 0; i < agentList.size(); i++) {
             Agent agent = agentList.get(i);
-            double sum = agent.getBidSet().stream().mapToDouble(Double::doubleValue).sum();
+            double sum = agent.getPaySet().stream().mapToDouble(Double::doubleValue).sum();
             log.info("agent:[{}] get pay [{}]",agent.getAgentId(),String.format("%.2f",sum));
         }
     }
@@ -350,29 +369,38 @@ public class DecoyStage {
     public void payForAgent(List<Agent> agentList) {
         for (int i = 0; i < agentList.size(); i++) {
             Agent agent = agentList.get(i);
-            List<Task> taskSet = agent.getSelectedTaskSet();
+            List<Object[]> taskSet = agent.getCompletedTask();
             double pay = 0;
             Random random = new Random();
             for (int j = 0; j < taskSet.size(); j++) {
-                Task task = taskSet.get(j);
+                Object[] obj = taskSet.get(j);
+                Task task = (Task) obj[0];
+                double bidVal = (Double)obj[1];
                 double x = random.nextDouble();
                 if (x < RANDOM_QUALITY_UNCOMMIT) {
+                    obj[2] = 0D;
                     continue;
                 }
                 if (TaskType.Target.equals(task.getTaskType())) {
                     if (x < RANDOM_QUALITY_LOW) {
+                        double actualCost = Main.avgQ * random.nextDouble();
+                        obj[2] = actualCost;
                         continue;
                     } else if (x < RANDOM_QUALITY_MIDDLE) {
                         double actQ = Main.avgQ + (task.getTaskQuality() - Main.avgQ) * random.nextDouble();
-                        pay += task.getTaskBid() * actQ / task.getTaskQuality();
+                        double curPay = bidVal * actQ / task.getTaskQuality();
+                        obj[2] = agent.calCostForTask(actQ);
+                        pay += curPay;
                     } else {
-                        pay += task.getTaskBid();
+                        obj[2] = agent.calCostForTask(task);
+                        pay += bidVal;
                     }
                 } else {
-                    pay += task.getTaskBid();
+                    obj[2] = agent.calCostForTask(task);
+                    pay += bidVal;
                 }
             }
-            agent.getBidSet().add(pay);
+            agent.getPaySet().add(pay);
         }
     }
 

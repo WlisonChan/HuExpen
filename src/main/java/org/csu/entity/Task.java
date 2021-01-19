@@ -3,6 +3,7 @@ package org.csu.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.csu.type.TaskType;
 
 import java.util.HashMap;
 import java.util.Map;
