@@ -37,7 +37,7 @@ public class Agent {
     // 沉没阈值
     private Double sinkThreshold;
 
-    // 此轮完成的任务("task")
+    // 此轮完成的任务([0]-任务,[1]-参与者报价，[2]-实际成本)
     private List<Object[]> completedTask;
 
     // 累积完成的任务集合
@@ -52,6 +52,12 @@ public class Agent {
     // 当前沉没成本值（轮次叠加）
     private Double sinkValue;
 
+    // 定价参数
+    private Double priceParam;
+
+    // 判断参与者下一轮是否只选择目标任务
+    private Boolean flag;
+
     public Agent() {
         this.sinkValue = 0D;
         this.agentType = AgentType.DecoyStage;
@@ -60,6 +66,7 @@ public class Agent {
         this.completedTask = new ArrayList<>();
         this.selectedTaskSet = new ArrayList<>();
         this.allCompletedTask = new ArrayList<>();
+        this.flag = false;
     }
 
     /**

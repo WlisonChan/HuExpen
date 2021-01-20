@@ -22,7 +22,7 @@ public class Main {
         List<Task> taskList = initTaskStatus();
         classifyTask(taskList);
         DecoyStage.build(taskList, agentList);
-        SinkStage.build(agentList);
+        SinkStage.build(agentList,taskList);
     }
 
     /**

@@ -6,7 +6,9 @@ import org.csu.type.AgentType;
 import org.csu.entity.Task;
 import org.csu.type.TaskType;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Slf4j
 public class SinkStage {
@@ -21,15 +23,21 @@ public class SinkStage {
     public static final double lambda = 2.25;
 
     // 沉没成本计算 x
-    public static final double x = 0.05;
+    public static final double X = 0.05;
 
     // 沉没成本计算 r
-    public static final double r = 0.9;
+    public static final double R = 0.9;
 
     // 沉没成本计算 sigma
-    public static final double sigma = 1 - x - r;
+    public static final double SIGMA = 1 - X - R;
 
-    public static void build(List<Agent> agentList){
+    // 固有降低率
+    public static final double R_RATE = 0.9;
+
+    // 沉没损失系数
+    public static final double SINK_PARAM = 1.1;
+
+    public static void build(List<Agent> agentList,List<Task> taskList){
         SinkStage sinkStage = new SinkStage();
         // 计算沉没阈值
         sinkStage.calSinkThreshold(agentList);
@@ -45,6 +53,7 @@ public class SinkStage {
                 e.setAgentType(AgentType.SinkStage);
             }
         });
+        sinkStage.updateTaskBid(agentList,taskList);
     }
 
     /**
@@ -169,11 +178,119 @@ public class SinkStage {
         for (int i = 0; i < taskSet.size(); i++) {
             Object[] obj = taskSet.get(i);
             double cost = (Double)obj[2];
-            double sink = r * agent.getSinkMax()+ x * cost + sigma * agent.getSinkValue();
+            double sink = R * agent.getSinkMax()+ X * cost + SIGMA * agent.getSinkValue();
             sink = Math.sqrt(sink);
             agent.setSinkValue(sink);
         }
     }
 
+    /**
+     * 计算沉没成本阶段的任务报价
+     * @param agentList
+     * @param taskList
+     */
+    public void updateTaskBid(List<Agent> agentList,List<Task> taskList){
 
+        // 计算定价参数值
+        calPtVal(agentList);
+
+        // 获取沉没成本最大值的平均值
+        double sinkMaxAvg = agentList.stream()
+                .filter(e->AgentType.SinkStage.equals(e.getAgentType()))
+                .mapToDouble(Agent::getSinkMax)
+                .average()
+                .orElse(0D);
+
+        // 获取沉没成本之和的平均值
+        double sinkValAvg = agentList.stream()
+                .filter(e->AgentType.SinkStage.equals(e.getAgentType()))
+                .mapToDouble(Agent::getSinkValue)
+                .average()
+                .orElse(0D);
+
+        // 求定价参数平均值
+        double pt = agentList.stream()
+                .filter(e->AgentType.SinkStage.equals(e.getAgentType()))
+                .mapToDouble(Agent::getPriceParam)
+                .average()
+                .orElse(0D);
+
+        // 更新沉没成本报价
+        taskList.stream()
+                .filter(e->e.getWinner()!=null)
+                .forEach(e->{
+                    double v = e.getTaskBid()*(1-R_RATE+R_RATE*sinkValAvg/sinkMaxAvg)*pt;
+                    e.setTaskBidForSink(v);
+                });
+    }
+
+    /**
+     * 计算定价参数
+     * @param agentList
+     */
+    public void calPtVal(List<Agent> agentList){
+        final Random random = new Random();
+
+        // 计算定价参数-
+        for (int i = 0; i < agentList.size(); i++) {
+            Agent agent = agentList.get(i);
+            if (agent.getPriceParam() == null
+                    && AgentType.SinkStage.equals(agent.getAgentType())) {
+                List<Double> ch = new ArrayList<>();
+                List<Double> cl = new ArrayList<>();
+                List<Double> bh = new ArrayList<>();
+                List<Double> bl = new ArrayList<>();
+
+                List<Object[]> objList = agent.getCompletedTask();
+                for (int j = 0; j < objList.size(); j++) {
+                    Object[] obj = objList.get(j);
+                    Task task = (Task) obj[0];
+                    double b = (Double) obj[1];
+                    double c = (Double) obj[2];
+                    if (TaskType.Target.equals(task.getTaskType())) {
+                        bh.add(b);
+                        ch.add(c);
+                    } else {
+                        bl.add(b);
+                        cl.add(c);
+                    }
+                }
+
+                // 求平均
+                double chAvg = ch.stream().mapToDouble(Double::doubleValue).average().orElse(0D);
+                double clAvg = cl.stream().mapToDouble(Double::doubleValue).average().orElse(0D);
+                double bhAvg = bh.stream().mapToDouble(Double::doubleValue).average().orElse(0D);
+                double blAvg = bl.stream().mapToDouble(Double::doubleValue).average().orElse(0D);
+                double temp = 1 - R_RATE + R_RATE * (agent.getSinkValue() / agent.getSinkMax());
+                double floor = (chAvg + blAvg - clAvg + SINK_PARAM * agent.getSinkValue()) / bhAvg / temp;
+                double upper = 1 / temp;
+                double pt = floor + random.nextDouble() * (upper - floor);
+                agent.setPriceParam(pt);
+            }
+        }
+    }
+
+    public double calEstimate(Agent agent){
+        List<Object[]> completedTask = agent.getCompletedTask();
+        double competeProfit = 0;
+        double targetProfit = 0;
+        double competeNum = 0;
+        double targetNum = 0;
+        for (int i = 0; i < completedTask.size(); i++) {
+            Object[] obj = completedTask.get(i);
+            Task task = (Task) obj[0];
+            double val = task.getTaskBid();
+            if (TaskType.Compete.equals(task.getTaskType())) {
+                competeNum++;
+                competeProfit += val - agent.calCostForTask(task);
+            } else {
+                targetNum++;
+                targetProfit += val - agent.calCostForTask(task);
+            }
+        }
+        competeProfit /= competeNum;
+        targetProfit /= targetNum;
+
+        return 0;
+    }
 }

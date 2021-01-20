@@ -25,6 +25,9 @@ public class Task {
     // 任务报价
     private Double taskBid;
 
+    // 沉没阶段报价
+    private Double taskBidForSink;
+
     // 任务质量
     private Double taskQuality;
 
